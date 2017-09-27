@@ -1,160 +1,150 @@
 // tslint:disable no-console no-eval TODO: Remove this line pre-release
 import * as dojoDeclare from "dojo/_base/declare";
+import * as domConstruct from "dojo/dom-construct";
 import * as WidgetBase from "mxui/widget/_WidgetBase";
-
-interface Action {
-    actionType: ActionType;
-    precondition: string;
-    errorMessage: string;
-    syncOnSavePage: boolean;
-    syncOnCommitObject: boolean;
-    newObjectEntity: string;
-    getOrCreateObjectEntity: string;
-    newAttribute: string;
-    newAttributeValue: string;
-    syncDataOnly: boolean;
-    openPage: string;
-    openPageLocation: "content" | "popup" | "modal";
-    customAction: string;
-}
-
-type ActionType = "savePage" | "openPage" | "closePage" | "closePopup" | "commitObject" | "createObject"
-    | "getOrCreateObject" | "changeObject" | "sync" | "showProgress" | "hideProgress" | "custom";
+import { Action, Actions } from "./Actions";
 
 class OfflineActions extends WidgetBase {
     // Properties from the Mendix modeler
-    trigger: "onclick" | "onload" | "onchange";
+    trigger: "onClick" | "onLoad" | "onChange";
     elementName: string;
     onChangeAttribute: string;
     actions: Action[];
+    // Properties from WidgetBase that are undocumented
+    friendlyId: string;
 
-    private contextObject: mendix.lib.MxObject;
-    private onChangeSubscription: number;
-    private currentValue: string | number | boolean;
+    private contextObject?: mendix.lib.MxObject;
     private currentActionIndex: number;
-    private pid: number;
-    private actionContextObject: mendix.lib.MxObject;
+    private currentAttributeValue: string | number | boolean;
+    private onChangeSubscription: number;
+    private processId: number;
+    private actionHandler: Actions;
 
     postCreate() {
         this.currentActionIndex = -1;
+        this.executeNextAction = this.executeNextAction.bind(this);
+        this.onActionError = this.onActionError.bind(this);
+        this.actionHandler = new Actions();
+        this.actionHandler
+            .setMxForm(this.mxform)
+            .setSuccessCallback(this.executeNextAction)
+            .setErrorCallback(this.onActionError);
         this.setupTrigger();
     }
 
     update(contextObject: mendix.lib.MxObject, callback?: () => void) {
         this.contextObject = contextObject;
-        this.updateActionContext(contextObject);
+        this.actionHandler.setContextObject(contextObject).setActionObject(contextObject);
 
+        if (this.trigger === "onChange") {
+            this.attachOnChange();
+        }
         if (callback) {
             callback();
-        }
-        if (this.trigger === "onchange") {
-            this.attachOnChange();
         }
     }
 
     private setupTrigger() {
-        if (this.trigger === "onclick") {
-            window.setTimeout(this.setElementEventHandler.bind(this), 50);
-        } else if (this.trigger === "onload") {
-            // TODO: could also be in update but only if there is a context. introduce option or two widgets
-            window.setTimeout(this.run.bind(this), 0);
+        if (this.trigger === "onClick") {
+            this.setElementEventHandler();
+        } else if (this.trigger === "onLoad") {
+            this.executeActions();
         }
-    }
-
-    private onclickAction() {
-        this.run();
     }
 
     private setElementEventHandler() {
-        const elements = document.getElementsByClassName("mx-name-" + this.elementName.trim());
-        if (elements.length === 0) {
-            // TODO: sometimes happens after a close.
-            console.log("Found " + elements.length + " elements instead of 1");
-            return;
+        const element = document.getElementsByClassName("mx-name-" + this.elementName.trim())[0];
+        if (!element) {
+            this.renderAlert(`Found no element with the name ${this.elementName}`);
+        } else {
+            element.addEventListener("click", this.executeActions.bind(this));
         }
-        elements[0].addEventListener("click", this.onclickAction.bind(this));
     }
 
     private attachOnChange() {
         if (this.onChangeSubscription) {
             this.unsubscribe(this.onChangeSubscription);
         }
-        this.onChangeSubscription = this.subscribe({
-            guid: this.contextObject.getGuid(),
-            attr: this.onChangeAttribute,
-            callback: guid => {
-                mx.data.get({
-                    guid,
-                    callback: obj => {
-                        this.currentValue = obj.get(this.onChangeAttribute);
-                        this.run();
-                    }
-                }, this);
-            }
-        });
+        if (this.contextObject) {
+            this.onChangeSubscription = this.subscribe({
+                guid: this.contextObject.getGuid(),
+                attr: this.onChangeAttribute,
+                callback: guid => {
+                    mx.data.get({
+                        guid,
+                        callback: obj => {
+                            this.currentAttributeValue = obj.get(this.onChangeAttribute);
+                            this.executeActions();
+                        }
+                    }, this);
+                }
+            });
+        } else {
+            this.renderAlert("the widget requires a context when set to trigger on attribute change");
+        }
     }
 
-    private run(callback?: () => void) {
-        if (callback) {
-            callback();
-        }
+    private renderAlert(message: string) {
+        const alert = domConstruct.create("div", { class: "alert alert-danger" }, this.domNode);
+        alert.innerHTML = `Configuration error in widget ${this.friendlyId}: ${message}`;
+    }
+
+    private executeActions() {
         this.reset();
-        this.performNextAction();
+        this.executeNextAction();
     }
 
     private reset() {
         this.currentActionIndex = -1;
     }
 
-    private performNextAction() {
+    private executeNextAction() {
         this.currentActionIndex++;
         if (this.currentActionIndex === this.actions.length) {
-            console.log("Done with all actions");
+
             return;
         }
         const action = this.actions[this.currentActionIndex];
         if (action.precondition.trim()) {
             try {
-                // TODO: find alternative to eval
                 const result = eval(this.replaceVariables(action.precondition));
-                console.log("Result of " + action.precondition + ": " + result);
-                if (result === false) {
-                    console.log("skipping", action);
-                    this.performNextAction();
+                if (!result) {
+                    this.executeNextAction();
+
                     return;
                 }
-            } catch (e) {
-                console.log("error while evaluating precondition: " + action.precondition);
-                this.onError(action, e);
+            } catch (error) {
+                this.onActionError(error, `failed to evaluate precondition: ${action.precondition}`);
                 this.reset();
+
                 return;
             }
         }
-        console.log("performing action " + this.currentActionIndex, action, this.actionContextObject);
-        if (action.actionType === "commitObject") {
-            this.performCommitObject(action);
-        } else if (action.actionType === "savePage") {
-            this.performSavePage(action);
-        } else if (action.actionType === "createObject") {
-            this.performCreateObject(action);
-        } else if (action.actionType === "getOrCreateObject") {
-            this.performGetOrCreateObject(action);
-        } else if (action.actionType === "changeObject") {
-            this.performChangeObject(action);
+
+        if (action.actionType === "savePage") {
+            this.actionHandler.savePage(action.syncOnSavePage);
         } else if (action.actionType === "openPage") {
-            this.performOpenPage(action);
+            this.actionHandler.openPage(action);
+        } else if (action.actionType === "commitObject") {
+            this.actionHandler.commitObject(action);
+        } else if (action.actionType === "createObject") {
+            this.actionHandler.createObject(action.newObjectEntity);
+        } else if (action.actionType === "getOrCreateObject") {
+            this.actionHandler.getOrCreateObject(action);
+        } else if (action.actionType === "changeObject") {
+            this.actionHandler.changeObject(action.newAttribute, this.replaceVariables(action.newAttributeValue));
         } else if (action.actionType === "closePage") {
-            this.performClosePage();
+            this.actionHandler.closePage();
         } else if (action.actionType === "closePopup") {
-            this.performClosePopup();
+            this.actionHandler.closePopup();
         } else if (action.actionType === "sync") {
-            this.performSync(action);
+            this.actionHandler.sync(action.syncDataOnly);
         } else if (action.actionType === "showProgress") {
-            this.performShowProgress();
+            this.actionHandler.showProgress();
         } else if (action.actionType === "hideProgress") {
-            this.performHideProgress();
+            this.actionHandler.hideProgress();
         } else if (action.actionType === "custom") {
-            this.performCustom(action);
+            this.actionHandler.custom(this.replaceVariables(action.customAction));
         } else {
             mx.ui.error("Unknown action: " + action.actionType);
         }
@@ -164,225 +154,25 @@ class OfflineActions extends WidgetBase {
         if (this.contextObject) {
             // TODO: add metaData to mendix.lib.MxObject typings
             const attributes = (this.contextObject as any).metaData.getAttributesWithoutReferences();
-            for (const i of attributes) {
-                code = code.replace(new RegExp("\\$" + attributes[i], "g"), "" + this.contextObject.get(attributes[i]));
+            for (const attribute of attributes) {
+                code = code.replace(new RegExp("\\$" + attribute, "g"), "" + this.contextObject.get(attribute));
             }
         }
-        if (this.currentValue) {
-            code = code.replace(new RegExp("\\$value", "g"), "" + this.currentValue);
+        if (this.currentAttributeValue) {
+            code = code.replace(new RegExp("\\$value", "g"), "" + this.currentAttributeValue);
         }
 
         return code;
     }
 
-    private onError(action: Action, e: Error) {
-        console.log("Error while executing action: ", action);
-        console.log("Error: ", e);
-        if (this.pid) {
-            mx.ui.hideProgress(this.pid);
+    private onActionError(error: Error, errorMessage?: string) {
+        const action = this.actions[this.currentActionIndex];
+        if (this.processId) {
+            mx.ui.hideProgress(this.processId);
         }
-        const msg = action.errorMessage || "An unexpected error occured";
-        mx.ui.error(msg, true);
-    }
-
-    private updateActionContext(contextObject: mendix.lib.MxObject) {
-        this.actionContextObject = contextObject;
-    }
-
-    // TODO: use mx.data.getOffline
-    private getEntity(entity: string, successCallback: (obj?: mendix.lib.MxObject) => void, errorCallback: (error: Error) => void) { // tslint:disable-line max-line-length
-        console.log("Entity: " + entity);
-        if ((mx as any).isOffline()) { // TODO: Add isOffline & getSlice to mendix-client typings
-            (mx.data as any).getSlice(entity, [
-                    /*{
-                                            attribute: attribute,
-                                            operator: "equals",
-                                            value: guid
-                                        }*/
-                ], {}, false,
-                (objs: mendix.lib.MxObject[], count: number) => {
-                    if (count > 0) {
-                        successCallback(objs[0]);
-                    } else {
-                        successCallback();
-                    }
-                },
-                errorCallback
-            );
-        } else {
-            try {
-                mx.data.get({
-                    xpath: "//" + entity /* + "[" + attribute + "=" + guid + "]"*/ ,
-                    callback: objs => {
-                        if (objs.length > 0) {
-                            successCallback(objs[0]);
-                        } else {
-                            successCallback();
-                        }
-                    }
-                }, this);
-            } catch (e) {
-                errorCallback(e);
-            }
-        }
-    }
-
-    private performCommitObject(action: Action) {
-        // TODO: use entity parameter (when implemented as dropdown field) to select the entity to commit
-        mx.data.commit({
-            mxobj: this.contextObject,
-            callback: () => {
-                if (action.syncOnCommitObject) {
-                    mx.data.synchronizeOffline(
-                        { fast: true },
-                        () => this.performNextAction(),
-                        e => {
-                            this.onError(action, e);
-                            this.reset();
-                        }
-                    );
-                } else {
-                    this.performNextAction();
-                }
-            },
-            error: e => {
-                this.onError(action, e);
-                this.reset();
-            }
-        }, this);
-    }
-
-    private performSavePage(action: Action) {
-        this.mxform.commit(
-            () => {
-                if (action.syncOnSavePage) {
-                    mx.data.synchronizeOffline(
-                        { fast: true },
-                        () => this.performNextAction(),
-                        e => {
-                            this.onError(action, e);
-                            this.reset();
-                        }
-                    );
-                } else {
-                    this.performNextAction();
-                }
-
-            },
-            e => {
-                this.onError(action, e);
-                this.reset();
-            }
-        );
-    }
-
-    private performCreateObject(action: Action) {
-        mx.data.create({
-            entity: action.newObjectEntity,
-            callback: obj => {
-                this.updateActionContext(obj);
-                this.performNextAction();
-            },
-            error: e => {
-                this.onError(action, e);
-                this.reset();
-            }
-        }, this);
-    }
-
-    // TODO: support filter parameter
-    private performGetOrCreateObject(action: Action) {
-        this.getEntity(action.getOrCreateObjectEntity,
-            obj => {
-                if (obj != null) {
-                    this.updateActionContext(obj);
-                    this.performNextAction();
-                } else {
-                    mx.data.create({
-                        entity: action.getOrCreateObjectEntity,
-                        callback: object => {
-                            this.updateActionContext(object);
-                            this.performNextAction();
-                        },
-                        error: e => {
-                            this.onError(action, e);
-                            this.reset();
-                        }
-                    }, this);
-                }
-            },
-            e => {
-                this.onError(action, e);
-                this.reset();
-            }
-        );
-    }
-
-    private performChangeObject(action: Action) {
-        const value = eval(this.replaceVariables(action.newAttributeValue));
-        this.actionContextObject.set(action.newAttribute, value);
-        this.performNextAction();
-    }
-
-    private performOpenPage(action: Action) {
-        if (this.actionContextObject) {
-            const context = new mendix.lib.MxContext();
-            context.setContext(this.actionContextObject.getEntity(), this.actionContextObject.getGuid());
-            mx.ui.openForm(action.openPage, {
-                location: action.openPageLocation,
-                context,
-                callback: () => this.performNextAction()
-            }, this);
-        } else {
-            mx.ui.openForm(action.openPage, {
-                location: "content",
-                callback: () => this.performNextAction()
-            }, this);
-        }
-    }
-
-    private performClosePage() {
-        mx.ui.back();
-        this.performNextAction();
-    }
-
-    private performClosePopup() {
-        (this.mxform as any).close(); // TODO: Add close to mendix-client typings
-        this.performNextAction();
-    }
-
-    private performSync(action: Action) {
-        mx.data.synchronizeOffline(
-            { fast: action.syncDataOnly },
-            () => this.performNextAction(),
-            e => {
-                this.onError(action, e);
-                this.reset();
-            }
-        );
-    }
-
-    private performShowProgress() {
-        this.pid = mx.ui.showProgress();
-        this.performNextAction();
-    }
-
-    private performHideProgress() {
-        if (this.pid) {
-            mx.ui.hideProgress(this.pid);
-        }
-        this.performNextAction();
-    }
-
-    private performCustom(action: Action) {
-        // TODO: support Promises
-        try {
-            eval(this.replaceVariables(action.customAction));
-            this.performNextAction();
-        } catch (e) {
-            this.onError(action, e);
-            this.reset();
-        }
+        const message = action.errorMessage || `An error occurred while executing action ${action.actionType}`;
+        mx.ui.error(`${message}: ${errorMessage || error.message}`, true);
+        this.reset();
     }
 }
 

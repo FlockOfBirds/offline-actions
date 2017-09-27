@@ -1,37 +1,33 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<widget id="OfflineActions.widget.OfflineActions" offlineCapable="true" needsEntityContext="false" xmlns="http://www.mendix.com/widget/1.0/">
+<widget id="OfflineActions.widget.OfflineActions" offlineCapable="true" needsEntityContext="false" xmlns="http://www.mendix.com/widget/1.0/"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../xsd/widget.xsd">
     <name>OfflineActions</name>
-    <description>The description of this widget.</description>
-
+    <description>Provides a set of actions to execute offline</description>
     <icon/>
-
     <properties>
-        <property key="trigger" type="enumeration" required="true" defaultValue="onclick">
+        <property key="trigger" type="enumeration" required="true" defaultValue="onClick">
             <caption>Trigger</caption>
             <category>General</category>
             <description>Trigger for the actions</description>
             <enumerationValues>
-                <enumerationValue key="onclick">On click of the selected element</enumerationValue>
-                <enumerationValue key="onload">On load</enumerationValue>
-                <enumerationValue key="onchange">On change of an attribute</enumerationValue>
+                <enumerationValue key="onClick">When the element is clicked</enumerationValue>
+                <enumerationValue key="onLoad">On load</enumerationValue>
+                <enumerationValue key="onChange">When the attribute is changed</enumerationValue>
             </enumerationValues>
         </property>
         <property key="elementName" type="string" required="false">
             <caption>Element name</caption>
             <category>General</category>
-            <description>The name of the element to attach the actions to</description>
+            <description>The name of the element that will trigger the actions on click</description>
         </property>
         <property key="onChangeAttribute" type="string" required="false">
             <caption>Attribute</caption>
             <category>General</category>
             <description>The attribute to watch for onchange</description>
         </property>
-
         <property key="actions" type="object" isList="true">
             <caption>Actions</caption>
             <category>General</category>
-            <description>Define the actions to be executed</description>
-
+            <description>Define the actions to execute in the order you want them executed</description>
             <properties>
                 <property key="actionType" type="enumeration" required="true" defaultValue="savePage">
                     <caption>Type</caption>
@@ -55,82 +51,70 @@
                 <property key="precondition" type="string" multiline="true" required="false">
                     <caption>Precondition</caption>
                     <category>General</category>
-                    <description>The precondition that needs to be satisfied to exectute the action</description>
+                    <description>The javascript expression to satisfy before the action is executed</description>
                 </property>
-
                 <property key="errorMessage" type="translatableString" required="false">
                     <caption>Error message</caption>
                     <category>General</category>
                     <description>The error message to show when there is an error</description>
                 </property>
-
                 <property key="syncOnSavePage" type="boolean" defaultValue="false">
                     <caption>Sync after saving page</caption>
                     <category>Save Page</category>
-                    <description>Perform a sync after the save is done</description>
+                    <description/>
                 </property>
-
                 <property key="syncOnCommitObject" type="boolean" defaultValue="false">
                     <caption>Sync after commit</caption>
                     <category>Commit object</category>
-                    <description>Perform a sync after the commit is done</description>
+                    <description/>
                 </property>
-
                 <!-- replace with Entity parameter when possible in offline -->
                 <property key="newObjectEntity" type="string" required="false">
                     <caption>Entity</caption>
                     <category>Create object</category>
-                    <description></description>
+                    <description>The entity of the object to create</description>
                 </property>
-
                 <property key="getOrCreateObjectEntity" type="string" required="false">
                     <caption>Entity to get or create</caption>
                     <category>Get or create object</category>
-                    <description></description>
+                    <description/>
                 </property>
-
                 <property key="newAttribute" type="string" required="false">
                     <caption>Attribute</caption>
                     <category>Change object</category>
-                    <description></description>
+                    <description/>
                 </property>
                 <property key="newAttributeValue" type="string" multiline="true" required="false">
                     <caption>Value</caption>
                     <category>Change object</category>
                     <description>The JavaScript expression. Attribute names with a $ before will be replaced by the string value. e.g. $Name</description>
                 </property>
-
                 <property key="syncDataOnly" type="boolean" defaultValue="true">
                     <caption>Sync data only</caption>
                     <category>Synchronize</category>
-                    <description>If this is enabled, only data is synced. When disabled files are also synced.</description>
+                    <description>If this is enabled, only data is synced. When disabled, files are also synced.</description>
                 </property>
-
                 <property key="openPage" type="form" required="false">
                     <caption>Page</caption>
-                    <category>Open Page</category>
+                    <category>Open page</category>
                     <description>The page to open</description>
                 </property>
                 <property key="openPageLocation" type="enumeration" required="true" defaultValue="content">
                     <caption>Location</caption>
-                    <category>Open Page</category>
+                    <category>Open page</category>
                     <description>How to open the page.</description>
                     <enumerationValues>
-                        <enumerationValue key="content">In content (default)</enumerationValue>
+                        <enumerationValue key="content">In content</enumerationValue>
                         <enumerationValue key="popup">Popup</enumerationValue>
                         <enumerationValue key="modal">Modal popup</enumerationValue>
                     </enumerationValues>
                 </property>
-
                 <property key="customAction" type="string" multiline="true" defaultValue="" required="false">
                     <caption>Custom action</caption>
                     <category>Custom</category>
                     <description>Attribute names with a $ before will be replaced by the string value. e.g. $Name</description>
                 </property>
-
-
             </properties>
         </property>
-
     </properties>
 </widget>
