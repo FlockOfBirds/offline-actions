@@ -29,7 +29,8 @@ class OfflineActions extends WidgetBase {
             .setMxForm(this.mxform)
             .setSuccessCallback(this.executeNextAction)
             .setErrorCallback(this.onActionError);
-        this.setupTrigger();
+        // Timeout ensures that the triggers & events are setup after the page has loaded
+        window.setTimeout(this.setupTrigger.bind(this), 1000);
     }
 
     update(contextObject: mendix.lib.MxObject, callback?: () => void) {
@@ -72,8 +73,8 @@ class OfflineActions extends WidgetBase {
                 callback: guid => {
                     mx.data.get({
                         guid,
-                        callback: obj => {
-                            this.currentAttributeValue = obj.get(this.onChangeAttribute);
+                        callback: mxObject => {
+                            this.currentAttributeValue = mxObject.get(this.onChangeAttribute);
                             this.executeActions();
                         }
                     }, this);
@@ -179,7 +180,7 @@ class OfflineActions extends WidgetBase {
 // Declare widget prototype the Dojo way
 // Thanks to https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/dojo/README.md
 // tslint:disable : only-arrow-functions
-dojoDeclare("OfflineActions.widget.OfflineActions", [ WidgetBase ], function(Source: any) {
+dojoDeclare("offlineactions.widget.OfflineActions", [ WidgetBase ], function(Source: any) {
     const result: any = {};
     for (const property in Source.prototype) {
         if (property !== "constructor" && Source.prototype.hasOwnProperty(property)) {

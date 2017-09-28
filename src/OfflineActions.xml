@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<widget id="OfflineActions.widget.OfflineActions" offlineCapable="true" needsEntityContext="false" xmlns="http://www.mendix.com/widget/1.0/"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../xsd/widget.xsd">
+<widget id="offlineactions.widget.OfflineActions" offlineCapable="true" needsEntityContext="false" xmlns="http://www.mendix.com/widget/1.0/"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../xsd/widget.xsd">
     <name>OfflineActions</name>
     <description>Provides a set of actions to execute offline</description>
     <icon/>
@@ -60,7 +60,7 @@
                 </property>
                 <property key="syncOnSavePage" type="boolean" defaultValue="false">
                     <caption>Sync after saving page</caption>
-                    <category>Save Page</category>
+                    <category>Save page</category>
                     <description/>
                 </property>
                 <property key="syncOnCommitObject" type="boolean" defaultValue="false">
