@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<widget id="offlineactions.widget.OfflineActions" offlineCapable="true" needsEntityContext="false" xmlns="http://www.mendix.com/widget/1.0/"  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../xsd/widget.xsd">
-    <name>OfflineActions</name>
+<widget id="offlineactions.widget.OfflineActions" offlineCapable="true" needsEntityContext="true" xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../xsd/widget.xsd">
+    <name>Offline Actions</name>
     <description>Provides a set of actions to execute offline</description>
     <icon/>
     <properties>
@@ -9,20 +9,59 @@
             <category>General</category>
             <description>Trigger for the actions</description>
             <enumerationValues>
-                <enumerationValue key="onClick">When the element is clicked</enumerationValue>
+                <enumerationValue key="onClick">Button click</enumerationValue>
                 <enumerationValue key="onLoad">On load</enumerationValue>
-                <enumerationValue key="onChange">When the attribute is changed</enumerationValue>
+                <enumerationValue key="onChange">Attribute change</enumerationValue>
             </enumerationValues>
         </property>
-        <property key="elementName" type="string" required="false">
-            <caption>Element name</caption>
-            <category>General</category>
-            <description>The name of the element that will trigger the actions on click</description>
-        </property>
-        <property key="onChangeAttribute" type="string" required="false">
+        <property key="onChangeAttribute" type="attribute" required="false">
             <caption>Attribute</caption>
             <category>General</category>
-            <description>The attribute to watch for onchange</description>
+            <description>The attribute to watch for change</description>
+            <attributeTypes>
+                <attributeType name="Boolean"/>
+                <attributeType name="DateTime"/>
+                <attributeType name="Enum"/>
+                <attributeType name="Integer"/>
+                <attributeType name="Long"/>
+                <attributeType name="String"/>
+            </attributeTypes>
+        </property>
+        <property key="buttonCaption" type="translatableString" required="false">
+            <caption>Caption</caption>
+            <category>Button</category>
+            <description/>
+            <translations>
+                <translation lang="en_US">Button</translation>
+                <translation lang="nl_NL">Button</translation>
+            </translations>
+        </property>
+        <property key="buttonIconImage" type="image" required="false">
+            <caption>Icon</caption>
+            <category>Button</category>
+            <description/>
+        </property>
+        <property key="buttonRenderMode" type="enumeration" defaultValue="button">
+            <caption>Render mode</caption>
+            <category>Button</category>
+            <description/>
+            <enumerationValues>
+                <enumerationValue key="button">Button</enumerationValue>
+                <enumerationValue key="link">Link</enumerationValue>
+            </enumerationValues>
+        </property>
+        <property key="buttonStyle" type="enumeration" defaultValue="default">
+            <caption>Button style</caption>
+            <category>Button</category>
+            <description/>
+            <enumerationValues>
+                <enumerationValue key="default">Default</enumerationValue>
+                <enumerationValue key="primary">Primary</enumerationValue>
+                <enumerationValue key="success">Success</enumerationValue>
+                <enumerationValue key="info">Info</enumerationValue>
+                <enumerationValue key="warning">Warning</enumerationValue>
+                <enumerationValue key="danger">Danger</enumerationValue>
+            </enumerationValues>
         </property>
         <property key="actions" type="object" isList="true">
             <caption>Actions</caption>
@@ -51,48 +90,115 @@
                 <property key="precondition" type="string" multiline="true" required="false">
                     <caption>Precondition</caption>
                     <category>General</category>
-                    <description>The javascript expression to satisfy before the action is executed</description>
+                    <description>The javascript expression to satisfy before the action is executed. Attribute values could be used via Advance > JavaScript variable</description>
                 </property>
                 <property key="errorMessage" type="translatableString" required="false">
                     <caption>Error message</caption>
                     <category>General</category>
                     <description>The error message to show when there is an error</description>
                 </property>
-                <property key="syncOnSavePage" type="boolean" defaultValue="false">
-                    <caption>Sync after saving page</caption>
-                    <category>Save page</category>
-                    <description/>
-                </property>
-                <property key="syncOnCommitObject" type="boolean" defaultValue="false">
-                    <caption>Sync after commit</caption>
-                    <category>Commit object</category>
-                    <description/>
-                </property>
-                <!-- replace with Entity parameter when possible in offline -->
-                <property key="newObjectEntity" type="string" required="false">
+                <property key="newObjectEntity" type="entity" required="false">
                     <caption>Entity</caption>
                     <category>Create object</category>
                     <description>The entity of the object to create</description>
                 </property>
-                <property key="getOrCreateObjectEntity" type="string" required="false">
+                <property key="getOrCreateObjectEntity" type="entity" required="false">
                     <caption>Entity to get or create</caption>
                     <category>Get or create object</category>
                     <description/>
                 </property>
-                <property key="newAttribute" type="string" required="false">
-                    <caption>Attribute</caption>
+                <property key="variableObject" type="enumeration" defaultValue="context">
+                    <caption>Change object</caption>
+                    <category>Change object</category>
+                    <description/>
+                    <enumerationValues>
+                        <enumerationValue key="context">Context</enumerationValue>
+                        <enumerationValue key="last">Last object</enumerationValue>
+                    </enumerationValues>
+                </property>
+                <property key="changeContextAttribute" type="attribute" required="false">
+                    <caption>Attribute context object</caption>
+                    <category>Change object</category>
+                    <description/>
+                    <attributeTypes>
+                        <attributeType name="Boolean"/>
+                        <attributeType name="DateTime"/>
+                        <attributeType name="Enum"/>
+                        <attributeType name="Integer"/>
+                        <attributeType name="Long"/>
+                        <attributeType name="String"/>
+                    </attributeTypes>
+                </property>
+                <property key="changeLastObjectEntity" type="entity" required="false">
+                    <caption>Last Object Entity</caption>
                     <category>Change object</category>
                     <description/>
                 </property>
-                <property key="newAttributeValue" type="string" multiline="true" required="false">
+                <property key="changeLastObjectAttribute" type="attribute" required="false" entityProperty="changeLastObjectEntity">
+                    <caption>Attribute last object</caption>
+                    <category>Change object</category>
+                    <description/>
+                    <attributeTypes>
+                        <attributeType name="Boolean"/>
+                        <attributeType name="DateTime"/>
+                        <attributeType name="Decimal"/>
+                        <attributeType name="Enum"/>
+                        <attributeType name="Integer"/>
+                        <attributeType name="Long"/>
+                        <attributeType name="String"/>
+                    </attributeTypes>
+                </property>
+                <property key="changeValueBy" type="enumeration" defaultValue="javascript">
+                    <caption>Change value by</caption>
+                    <category>Change object</category>
+                    <description/>
+                    <enumerationValues>
+                        <enumerationValue key="javascript">JavaScript</enumerationValue>
+                        <enumerationValue key="aggregate">Aggregation</enumerationValue>
+                        <!-- <enumerationValue key="expression">Expression</enumerationValue> -->
+                    </enumerationValues>
+                </property>
+                <property key="changeAttributeValue" type="string" multiline="true" required="false">
                     <caption>Value</caption>
                     <category>Change object</category>
-                    <description>The JavaScript expression. Attribute names with a $ before will be replaced by the string value. e.g. $Name</description>
+                    <description>The JavaScript expression. Attribute values could be used via Advance > JavaScript variable</description>
+                </property>
+                <property key="changeAggregateAttribute" type="attribute" isPath="yes" pathType="referenceSet" required="false" >
+                    <caption>Aggregate attribute</caption>
+                    <category>Change object</category>
+                    <description/>
+                    <attributeTypes>
+                        <attributeType name="Decimal"/>
+                        <attributeType name="Integer"/>
+                        <attributeType name="Long"/>
+                    </attributeTypes>
+                </property>
+                <property key="changeAggregateOperation" type="enumeration" defaultValue="sum">
+                    <caption>Aggregate operation</caption>
+                    <category>Change object</category>
+                    <description/>
+                    <enumerationValues>
+                        <enumerationValue key="sum">Sum</enumerationValue>
+                        <enumerationValue key="count">Count</enumerationValue>
+                        <enumerationValue key="min">Min</enumerationValue>
+                        <enumerationValue key="max">Max</enumerationValue>
+                        <enumerationValue key="average">Average</enumerationValue>
+                    </enumerationValues>
                 </property>
                 <property key="syncDataOnly" type="boolean" defaultValue="true">
                     <caption>Sync data only</caption>
                     <category>Synchronize</category>
                     <description>If this is enabled, only data is synced. When disabled, files are also synced.</description>
+                </property>
+                <property key="openPageObject" type="enumeration" defaultValue="context">
+                    <caption>Open with</caption>
+                    <category>Open page</category>
+                    <description/>
+                    <enumerationValues>
+                        <enumerationValue key="none">No object</enumerationValue>
+                        <enumerationValue key="context">Context object</enumerationValue>
+                        <enumerationValue key="last">Last object</enumerationValue>
+                    </enumerationValues>
                 </property>
                 <property key="openPage" type="form" required="false">
                     <caption>Page</caption>
@@ -112,7 +218,67 @@
                 <property key="customAction" type="string" multiline="true" defaultValue="" required="false">
                     <caption>Custom action</caption>
                     <category>Custom</category>
-                    <description>Attribute names with a $ before will be replaced by the string value. e.g. $Name</description>
+                    <description>Attribute values could be used via Advance > JavaScript variable</description>
+                </property>
+            </properties>
+        </property>
+        <property key="javaScriptVariableList" type="object" isList="true" required="false">
+            <caption>JavaScript variable</caption>
+            <category>Advanced</category>
+            <description>Create JavaScript variable for Precondition, Set value and custom actions. Variable will be evaluated just in time</description>
+            <properties>
+                <property key="name" type="string">
+                    <caption>Variable name</caption>
+                    <category>General</category>
+                    <description/>
+                </property>
+                <property key="variableObject" type="enumeration" defaultValue="context">
+                    <caption>Object</caption>
+                    <category>General</category>
+                    <description/>
+                    <enumerationValues>
+                        <enumerationValue key="context">Context</enumerationValue>
+                        <enumerationValue key="lastObject">Last object</enumerationValue>
+                    </enumerationValues>
+                </property>
+                <property key="contextAttribute" type="attribute" required="false">
+                    <caption>Attribute context</caption>
+                    <category>General</category>
+                    <description/>
+                    <attributeTypes>
+                        <attributeType name="AutoNumber"/>
+                        <attributeType name="Binary"/>
+                        <attributeType name="Boolean"/>
+                        <attributeType name="DateTime"/>
+                        <attributeType name="Decimal"/>
+                        <attributeType name="Enum"/>
+                        <attributeType name="HashString"/>
+                        <attributeType name="Integer"/>
+                        <attributeType name="Long"/>
+                        <attributeType name="String"/>
+                    </attributeTypes>
+                </property>
+                <property key="lastObjectEntity" type="entity" required="false">
+                    <caption>Last object entity</caption>
+                    <category>General</category>
+                    <description/>
+                </property>
+                <property key="lastObjectAttribute" type="attribute" required="false" entityProperty="lastObjectEntity">
+                    <caption>Attribute last object</caption>
+                    <category>General</category>
+                    <description/>
+                    <attributeTypes>
+                        <attributeType name="AutoNumber"/>
+                        <attributeType name="Binary"/>
+                        <attributeType name="Boolean"/>
+                        <attributeType name="DateTime"/>
+                        <attributeType name="Decimal"/>
+                        <attributeType name="Enum"/>
+                        <attributeType name="HashString"/>
+                        <attributeType name="Integer"/>
+                        <attributeType name="Long"/>
+                        <attributeType name="String"/>
+                    </attributeTypes>
                 </property>
             </properties>
         </property>
